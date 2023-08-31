@@ -25,9 +25,9 @@ Author: Hongrui Zheng
 '''
 
 # gym imports
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
+import gymnasium as gym
+from gymnasium import error, spaces, utils
+from gymnasium.utils import seeding
 
 # base classes
 from f110_gym.envs.base_classes import Simulator, Integrator

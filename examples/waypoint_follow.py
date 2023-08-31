@@ -1,9 +1,11 @@
 import time
 from f110_gym.envs.base_classes import Integrator
-import yaml
-import gym
+import gymnasium as gym
 import numpy as np
 from argparse import Namespace
+import yaml
+
+from f110_gym.envs import F110Env
 
 from numba import njit
 
@@ -269,7 +271,7 @@ def main():
 
         planner.render_waypoints(env_renderer)
 
-    env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4)
+    env = F110Env(map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4, apply_api_compatibility=True)
     env.add_render_callback(render_callback)
     
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))

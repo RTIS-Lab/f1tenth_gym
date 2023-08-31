@@ -25,7 +25,7 @@ Author: Hongrui Zheng
 '''
 
 # gym imports
-import gym
+import gymnasium as gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
