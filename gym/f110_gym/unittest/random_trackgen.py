@@ -228,6 +228,7 @@ if __name__ == '__main__':
     for i in range(NUM_MAPS):
         try:
             track, track_int, track_ext = create_track()
+            print(track_int.shape)
         except:
             print('Random generator failed, retrying')
             continue
