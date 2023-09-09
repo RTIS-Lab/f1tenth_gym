@@ -4,6 +4,8 @@ import gymnasium as gym
 import numpy as np
 from argparse import Namespace
 import yaml
+# for multiprocessing
+import multiprocessing as mp
 
 from f110_gym.envs import F110Env
 
@@ -244,56 +246,51 @@ def main():
     """
     main entry point
     """
+    noise_scales = np.linspace(0.0, 0.03, 10)
+    original_noise_scales = noise_scales.copy()
+    runs_per_noise = 20
+    noise_scales = np.repeat(noise_scales, runs_per_noise)
+    success_rates = []
+    # multiprocessing
+    pool = mp.Pool(mp.cpu_count())
+    results = [pool.apply_async(run_with_noise, args=(noise_scale,)) for noise_scale in noise_scales]
+    output = [p.get() for p in results]
+    success_rates = np.array(output)
+    # each element of success_rates is a tuple (noise_scale, success)
 
+    # compute success rate per noise scale
+    noise_success_rates = [0]*len(original_noise_scales)
+    for i, noise_scale in enumerate(original_noise_scales):
+        noise_success_rates[i] = np.sum(success_rates[success_rates[:,0] == noise_scale, 1]) / runs_per_noise
+
+    print(noise_success_rates)
+    print(original_noise_scales)
+
+
+def run_with_noise(noise_scale):
     work = {'mass': 3.463388126201571, 'lf': 0.15597534362552312, 'tlad': 0.82461887897713965, 'vgain': 1.375}#0.90338203837889}
     
     with open('config_example_map.yaml') as file:
         conf_dict = yaml.load(file, Loader=yaml.FullLoader)
+
     conf = Namespace(**conf_dict)
 
     planner = PurePursuitPlanner(conf, (0.17145+0.15875)) #FlippyPlanner(speed=0.2, flip_every=1, steer=10)
 
-    def render_callback(env_renderer):
-        # custom extra drawing function
-
-        e = env_renderer
-
-        # update camera to follow car
-        x = e.cars[0].vertices[::2]
-        y = e.cars[0].vertices[1::2]
-        top, bottom, left, right = max(y), min(y), min(x), max(x)
-        e.score_label.x = left
-        e.score_label.y = top - 700
-        e.left = left - 800
-        e.right = right + 800
-        e.top = top + 800
-        e.bottom = bottom - 800
-
-        planner.render_waypoints(env_renderer)
-
     env = F110Env(map=conf.map_path, map_ext=conf.map_ext, num_agents=1, timestep=0.01, integrator=Integrator.RK4, apply_api_compatibility=True)
-    env.add_render_callback(render_callback)
-    noise_scale = 0.05
-    while True:
-        obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
-        # env.render()
-        start = time.time()
-        frames = 0
-        laptime = 0.0
+    obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
+    start = time.time()
+    laptime = 0.0
 
-        while not done:
-            noise_x = np.random.normal(0, noise_scale)
-            noise_y = np.random.normal(0, noise_scale)
-            speed, steer = planner.plan(obs['poses_x'][0] + noise_x, obs['poses_y'][0] + noise_y, obs['poses_theta'][0], work['tlad'], work['vgain'])
-            obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
-            laptime += step_reward
-            env.render(mode='human')
-            frames += 1
-            if frames % 500 == 0:
-                print(f"framerate: {frames/(time.time()-start)}")
-            
-            
-        print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
+    while not done:
+        noise_x = np.random.normal(0, noise_scale)
+        noise_y = np.random.normal(0, noise_scale)
+        speed, steer = planner.plan(obs['poses_x'][0] + noise_x, obs['poses_y'][0] + noise_y, obs['poses_theta'][0], work['tlad'], work['vgain'])
+        obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
+        laptime += step_reward
+
+    result = np.any(info['checkpoint_done'])
+    return (noise_scale, result)
 
 if __name__ == '__main__':
     main()
