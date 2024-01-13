@@ -241,10 +241,10 @@ class RaceCar(object):
         in_collision = check_ttc_jit(current_scan, self.state[3], self.scan_angles, self.cosines, self.side_distances, self.ttc_thresh)
 
         # if in collision stop vehicle
-        if in_collision:
-            self.state[3:] = 0.
-            self.accel = 0.0
-            self.steer_angle_vel = 0.0
+        # if in_collision:
+            # self.state[3:] = 0.
+            # self.accel = 0.0
+            # self.steer_angle_vel = 0.0
 
         # update state
         self.in_collision = in_collision
